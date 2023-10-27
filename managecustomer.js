@@ -6,6 +6,34 @@ let bday = "";
 let form = "";
 let elements = "";
 
+
+const checkBoxListener = ()=>{
+    const signUpButton = document.getElementById("createbtn");
+    const textMessagesCheckBox = document.getElementById("textMessageCheckBox");
+    const privacyCheckBox = document.getElementById("privacyCheckBox");
+    const termsOfUseCheckBox = document.getElementById("termsOfUseCheckBox");
+    const cookiePolicyCheckBox = document.getElementById("cookiePolicyCheckBox");
+
+    if(textMessagesCheckBox.checked && privacyCheckBox.checked && termsOfUseCheckBox.checked && cookiePolicyCheckBox.checked){
+        signUpButton.disabled=false;
+    } else{
+        signUpButton.disabled=true;
+    }
+}
+
+$(document).ready(function(){
+
+   const privacyCheckBox = document.getElementById("privacyCheckBox");
+   privacyCheckBox.addEventListener('change',checkBoxListener);
+
+   const termsOfUseCheckBox = document.getElementById("termsOfUseCheckBox");
+   termsOfUseCheckBox.addEventListener('change',checkBoxListener);
+
+   const cookiePolicyCheckBox = document.getElementById("cookiePolicyCheckBox");
+   cookiePolicyCheckBox.addEventListener('change',checkBoxListener);
+
+});
+
 function setcustomername(){
     customerName = $("#cn").val();
 }
@@ -74,13 +102,51 @@ function createcustomer(){
     setphone();
     setbday();
 
-    var customer = {
+//this is the more picky of the two operations, so let's try it first, and if it succeeds, create the customer, not vice
+// versa
+
+    $.ajax({
+        type: 'POST',
+        url: '/user',
+        data: JSON.stringify({
+            'userName':email,
+            email,
+            password,
+            phone,
+            birthDate:bday,
+            verifyPassword,
+            agreedToTermsOfUseDate: new Date().getTime(),
+            agreedToCookiePolicyDate: new Date().getTime(),
+            agreedToPrivacyPolicyDate: new Date().getTime(),
+            agreedToTextMessageDate: new Date().getTime()
+
+        }),//we are using the email as the user name
+        success: function(data) {
+            createCustomer(data);
+        },
+        error: function(xhr){
+            console.log(JSON.stringify(xhr))
+            if(xhr.status==409){
+                alert("Email or cell # has already been previously registered");
+            } else{
+                alert("Error creating account. Please confirm password is at least 6 characters, has an upper case letter, a lower case letter, a number, and a symbol.")
+            }
+        },
+        contentType: "application/text",
+        dataType: 'text'
+    });
+
+
+}
+
+const createCustomer = (createUserResponse)=>{
+
+    const customer = {
         customerName : customerName,
         email : email,
         phone : phone,
         birthDay: bday
     }
-
 
     $.ajax({
         type: 'POST',
@@ -88,20 +154,19 @@ function createcustomer(){
         data: JSON.stringify(customer),
         contentType: 'application/text',
         dataType: 'text',
-        success: function(data) {
-            localStorage.setItem("customer",JSON.stringify(customer));
-            window.location.href=data
-        }
-    });
-
-    $.ajax({
-        type: 'POST',
-        url: '/user',
-        data: JSON.stringify({'userName':email, email, password, phone, "birthDate":bday, 'verifyPassword':verifypassword}),//we are using the email as the user name
-        success: function(data) { alert(data);
-        window.location.href = "/index.html"},
-        contentType: "application/text",
-        dataType: 'text'
+        success: function (data) {
+            localStorage.setItem("customer", JSON.stringify(customer));
+            alert(createUserResponse);
+            window.location.href = "/index.html"
+        },
+        error: function (xhr) {
+            console.log(JSON.stringify(xhr))
+            if (xhr.status == 409) {
+                alert("Email or cell # has already been previously registered");
+            } else {
+                alert("Error creating account. Please confirm information is correct.")
+            }
+        },
     });
 }
 
